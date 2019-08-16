@@ -1,2 +1,2 @@
-# online_CSC_optimization
+# Online Collective Self-Consumption Optimization
 FastAPI + InfluxDB + Grafana
