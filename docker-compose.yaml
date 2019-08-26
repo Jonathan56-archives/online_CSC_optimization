@@ -2,18 +2,27 @@ version: "3"
 
 services:
 
-    # influxdb:
-    #     image: influxdb:latest
-    #     volumes:
-    #       - ./influxdb:/var/lib/influxdb
-    #     ports:
-    #       - "8083:8083"
-    #       - "8086:8086"
-    #     environment:
-    #       - INFLUXDB_DB=csc
-    #       - INFLUXDB_ADMIN_USER=root
-    #       - INFLUXDB_ADMIN_PASSWORD=root
-    #
+    influxdb:
+        image: influxdb:latest
+        volumes:
+          - ./influxdb:/var/lib/influxdb
+        ports:
+          - "8083:8083"
+          - "8086:8086"
+        environment:
+          - INFLUXDB_DB=csc
+          - INFLUXDB_ADMIN_USER=root
+          - INFLUXDB_ADMIN_PASSWORD=root
+
+    # chronograf:
+    #   image: chronograf:latest
+    #   environment:
+    #     INFLUXDB_URL: http://influxdb:8086
+    #   ports:
+    #     - "8889:8888"
+    #   links:
+    #     - influxdb
+
     # grafana:
     #     image: grafana/grafana:latest
     #     volumes:
@@ -30,12 +39,17 @@ services:
     #     image: forecast:latest
 
     fastapi:
-        image: tiangolo/uvicorn-gunicorn-fastapi:python3.7
+        build:
+          context: .
+          dockerfile: ./app/Dockerfile
+        image: fastapi:latest
         ports:
           - 80:80
         environment:
-          - GUNICORN_CMD_ARGS="--reload"
-        # links:
-        #   - influxdb
+          - LOG_LEVEL=debug
+        # Seems to not create multiple worker?
+        command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--reload", "--port", "80"]
+        links:
+          - influxdb
         volumes:
           - ./app:/app
