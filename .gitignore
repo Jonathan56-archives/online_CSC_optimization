@@ -1,3 +1,4 @@
+__pycache__/
 /influxdb/
 !influxdb/.gitkeep
 .ipynb_checkpoints/
