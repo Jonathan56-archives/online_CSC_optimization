@@ -1,6 +1,6 @@
 from entsoe import EntsoePandasClient
 from datetime import datetime, timedelta
-import apikey
+import setting
 import pandas
 import schedule
 import time
@@ -16,7 +16,7 @@ def forecast():
     print('Fetching forecast from ' + str(start)+ ' to ' + str(end))
 
     # Query data
-    client = EntsoePandasClient(api_key=apikey.key)
+    client = EntsoePandasClient(api_key=setting.key)
     ts = client.query_load_forecast(country_code, start=start,end=end)
     # We could concat historical data to have an accurate curve afterward
     #client.query_load(country_code, start=start - timedelta(hours=24),end=end)
