@@ -41,6 +41,7 @@ def forecast():
     print('Forecast sent ' + str(res))
 
 # Schedule forecast
+time.sleep(15) # wait until fastapi is up
 forecast()  # do it once before
 schedule.every().hour.do(forecast)
 

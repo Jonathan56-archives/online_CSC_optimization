@@ -78,9 +78,9 @@ def forecast(times: List[str], values: List[float]):
 def battery_order(order: BatteryOrder):
     # Convert start and end time in second since epoch
     order.startby = datetime.strptime(
-        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
+        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
     order.endby = datetime.strptime(
-        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
+        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
 
     # Create a dataframe to be saved to influxdb
     df = pandas.DataFrame(
@@ -124,9 +124,9 @@ def remove_battery_order(t: str):
 def shapeable_order(order: ShapeableOrder):
     # Convert start and end time in second since epoch
     order.startby = datetime.strptime(
-        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
+        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
     order.endby = datetime.strptime(
-        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
+        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
 
     # Create a dataframe to be saved to influxdb
     df = pandas.DataFrame(
@@ -167,9 +167,9 @@ def remove_shapeable_order(t: str):
 def deferrable_order(order: DeferrableOrder):
     # Convert start and end time in second since epoch
     order.startby = datetime.strptime(
-        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
+        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
     order.endby = datetime.strptime(
-        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
+        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
 
     # Create a dataframe to be saved to influxdb
     df = pandas.DataFrame(
@@ -241,18 +241,18 @@ def optimization():
         query = ("select * from bbook " +
              "WHERE startby >= " +
              str(int((start +
-             timedelta(minutes=5)).timestamp())) +
+             timedelta(minutes=5)).timestamp() * 1000)) +
              " AND endby <= " +
              str(int((start +
-             timedelta(hours=24)).timestamp())))
+             timedelta(hours=24)).timestamp() * 1000)))
         bbook = client.query(query)['bbook']
 
         # Set startby and endby as integers
         opt_bbook = bbook.copy()
-        opt_bbook['startby'] -= first_t.timestamp()
-        opt_bbook['startby'] /= 60 * 60 / TIMESTEP
-        opt_bbook['endby'] -= first_t.timestamp()
-        opt_bbook['endby'] /= 60 * 60 / TIMESTEP
+        opt_bbook['startby'] -= first_t.timestamp() * 1000
+        opt_bbook['startby'] /= 60 * 1000 * 60 / TIMESTEP
+        opt_bbook['endby'] -= first_t.timestamp() * 1000
+        opt_bbook['endby'] /= 60 * 1000 * 60 / TIMESTEP
         opt_bbook['id'] = list(range(0, len(opt_bbook)))
         opt_bbook.set_index('id', drop=True, inplace=True)
     except:
@@ -263,18 +263,18 @@ def optimization():
         query = ("select * from sbook " +
                  "WHERE startby >= " +
                  str(int((start +
-                 timedelta(minutes=5)).timestamp())) +
+                 timedelta(minutes=5)).timestamp() * 1000)) +
                  " AND endby <= " +
                  str(int((start +
-                 timedelta(hours=24)).timestamp())))
+                 timedelta(hours=24)).timestamp() * 1000)))
         sbook = client.query(query)['sbook']
 
         # Set startby and endby as integers
         opt_sbook = sbook.copy()
-        opt_sbook['startby'] -= first_t.timestamp()
-        opt_sbook['startby'] /= 60 * 60 / TIMESTEP
-        opt_sbook['endby'] -= first_t.timestamp()
-        opt_sbook['endby'] /= 60 * 60 / TIMESTEP
+        opt_sbook['startby'] -= first_t.timestamp() * 1000
+        opt_sbook['startby'] /= 60 * 1000 * 60 / TIMESTEP
+        opt_sbook['endby'] -= first_t.timestamp() * 1000
+        opt_sbook['endby'] /= 60 * 1000 * 60 / TIMESTEP
         opt_sbook['id'] = list(range(0, len(opt_sbook)))
         opt_sbook.set_index('id', drop=True, inplace=True)
     except:
@@ -286,17 +286,17 @@ def optimization():
         query = ("select * from dbook " +
                  "WHERE startby >= " +
                  str(int((start +
-                 timedelta(minutes=5)).timestamp())) +
+                 timedelta(minutes=5)).timestamp() * 1000)) +
                  " AND endby <= " +
                  str(int((start +
-                 timedelta(hours=24)).timestamp())))
+                 timedelta(hours=24)).timestamp() * 1000)))
         dbook = client.query(query)['dbook']
 
         opt_dbook = dbook.copy()
-        opt_dbook['startby'] -= first_t.timestamp()
-        opt_dbook['startby'] /= 60 * 60 / TIMESTEP
-        opt_dbook['endby'] -= first_t.timestamp()
-        opt_dbook['endby'] /= 60 * 60 / TIMESTEP
+        opt_dbook['startby'] -= first_t.timestamp() * 1000
+        opt_dbook['startby'] /= 60 * 1000 * 60 / TIMESTEP
+        opt_dbook['endby'] -= first_t.timestamp() * 1000
+        opt_dbook['endby'] /= 60 * 1000 * 60 / TIMESTEP
         opt_dbook['id'] = list(range(0, len(opt_dbook)))
         opt_dbook.set_index('id', drop=True, inplace=True)
         # Turn profile_kw from str to floats
