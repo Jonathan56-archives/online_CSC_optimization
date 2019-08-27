@@ -14,14 +14,14 @@ services:
           - INFLUXDB_ADMIN_USER=root
           - INFLUXDB_ADMIN_PASSWORD=root
 
-    # chronograf:
-    #   image: chronograf:latest
-    #   environment:
-    #     INFLUXDB_URL: http://influxdb:8086
-    #   ports:
-    #     - "8889:8888"
-    #   links:
-    #     - influxdb
+    chronograf:
+      image: chronograf:latest
+      environment:
+        INFLUXDB_URL: http://influxdb:8086
+      ports:
+        - "8889:8888"
+      links:
+        - influxdb
 
     grafana:
         image: grafana/grafana:latest

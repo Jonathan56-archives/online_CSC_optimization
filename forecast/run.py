@@ -41,10 +41,10 @@ def forecast():
     print('Forecast sent ' + str(res))
 
 # Schedule forecast
-schedule.every().minute.do(forecast)
+schedule.every().hour.do(forecast)
 
 while True:
     schedule.run_pending()
     # Wake up every 5 min
     # to run what ever task
-    time.sleep(0.5 * 60)
+    time.sleep(10 * 60)

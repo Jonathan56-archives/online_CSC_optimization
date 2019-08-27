@@ -70,6 +70,7 @@ def forecast(times: List[str], values: List[float]):
     client.close()
 
     # Run optimization
+    optimization()
     return {"status": "sucess"}
 
 
@@ -82,8 +83,9 @@ def battery_order(order: BatteryOrder):
         order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
 
     # Create a dataframe to be saved to influxdb
-    df = pandas.DataFrame(index=[datetime.now()],
-                          data=json.loads(order.json()))
+    df = pandas.DataFrame(
+        index=[datetime.now().replace(second=0, microsecond=0)],
+        data=json.loads(order.json()))
 
     # Open connection and write to DB
     client = DataFrameClient(host, port, user, password, dbname)
@@ -91,6 +93,30 @@ def battery_order(order: BatteryOrder):
     client.close()
 
     # Run optimization
+    optimization()
+    return {"status": "sucess"}
+
+
+@app.post("/removebatteryorder")
+def remove_battery_order(t: str):
+    # Create fake order with 0
+    data = {'min_kw': [0.0],
+            'max_kw': [0.0],
+            'max_kwh': [0.0],
+            'initial_kwh': [0.0],
+            'end_kwh': [0.0]}
+    # minus 2 hours is a work around #@?! timezone
+    df = pandas.DataFrame(
+        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') - timedelta(hours=2)],
+        data=data)
+
+    # Open connection and write to DB
+    client = DataFrameClient(host, port, user, password, dbname)
+    client.write_points(df, 'bbook')
+    client.close()
+
+    # Run optimization
+    optimization()
     return {"status": "sucess"}
 
 
@@ -103,8 +129,9 @@ def shapeable_order(order: ShapeableOrder):
         order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
 
     # Create a dataframe to be saved to influxdb
-    df = pandas.DataFrame(index=[datetime.now()],
-                          data=json.loads(order.json()))
+    df = pandas.DataFrame(
+        index=[datetime.now().replace(second=0, microsecond=0)],
+        data=json.loads(order.json()))
 
     # Open connection and write to DB
     client = DataFrameClient(host, port, user, password, dbname)
@@ -112,6 +139,27 @@ def shapeable_order(order: ShapeableOrder):
     client.close()
 
     # Run optimization
+    optimization()
+    return {"status": "sucess"}
+
+
+@app.post("/removeshapeableorder")
+def remove_shapeable_order(t: str):
+    # Create fake order with 0
+    data = {'max_kw': [0.0],
+            'end_kwh': [0.0]}
+    # minus 2 hours is a work around #@?! timezone
+    df = pandas.DataFrame(
+        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') - timedelta(hours=2)],
+        data=data)
+
+    # Open connection and write to DB
+    client = DataFrameClient(host, port, user, password, dbname)
+    client.write_points(df, 'sbook')
+    client.close()
+
+    # Run optimization
+    optimization()
     return {"status": "sucess"}
 
 
@@ -124,8 +172,9 @@ def deferrable_order(order: DeferrableOrder):
         order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp()
 
     # Create a dataframe to be saved to influxdb
-    df = pandas.DataFrame(index=[datetime.now()],
-                          data=json.loads(order.json()))
+    df = pandas.DataFrame(
+        index=[datetime.now().replace(second=0, microsecond=0)],
+        data=json.loads(order.json()))
 
     # Open connection and write to DB
     client = DataFrameClient(host, port, user, password, dbname)
@@ -133,6 +182,27 @@ def deferrable_order(order: DeferrableOrder):
     client.close()
 
     # Run optimization
+    optimization()
+    return {"status": "sucess"}
+
+
+@app.post("/removedeferrableorder")
+def remove_deferrable_order(t: str):
+    # Create fake order with 0
+    data = {'duration': [1],
+            'profile_kw': [[0.0]]}
+    # minus 2 hours is a work around #@?! timezone
+    df = pandas.DataFrame(
+        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') - timedelta(hours=2)],
+        data=data)
+
+    # Open connection and write to DB
+    client = DataFrameClient(host, port, user, password, dbname)
+    client.write_points(df, 'dbook')
+    client.close()
+
+    # Run optimization
+    optimization()
     return {"status": "sucess"}
 
 
@@ -155,33 +225,6 @@ def optimization():
              "'")
     uncontr = client.query(query)['uncontr']
 
-    # Query order books
-    query = ("select * from bbook " +
-         "WHERE startby >= " +
-         str(int((start +
-         timedelta(minutes=5)).timestamp())) +
-         " AND endby <= " +
-         str(int((start +
-         timedelta(hours=24)).timestamp())))
-    bbook = client.query(query)['bbook']
-    query = ("select * from sbook " +
-             "WHERE startby >= " +
-             str(int((start +
-             timedelta(minutes=5)).timestamp())) +
-             " AND endby <= " +
-             str(int((start +
-             timedelta(hours=24)).timestamp())))
-    sbook = client.query(query)['sbook']
-    query = ("select * from dbook " +
-             "WHERE startby >= " +
-             str(int((start +
-             timedelta(minutes=5)).timestamp())) +
-             " AND endby <= " +
-             str(int((start +
-             timedelta(hours=24)).timestamp())))
-    dbook = client.query(query)['dbook']
-
-    # Prepare data for optimization
     # Get the reference t=0
     first_t = uncontr.iloc[0].name
     uncontr_t = uncontr.index
@@ -193,34 +236,76 @@ def optimization():
     opt_uncontr.set_index('index', drop=True, inplace=True)
     opt_uncontr.rename(columns={'uncontr': 'p'}, inplace=True)
 
-    # Set startby and endby as integers
-    opt_bbook = bbook.copy()
-    opt_bbook['startby'] -= first_t.timestamp()
-    opt_bbook['startby'] /= 60 * 60 / TIMESTEP
-    opt_bbook['endby'] -= first_t.timestamp()
-    opt_bbook['endby'] /= 60 * 60 / TIMESTEP
-    opt_bbook['id'] = list(range(0, len(opt_bbook)))
-    opt_bbook.set_index('id', drop=True, inplace=True)
+    # Query order books
+    try:
+        query = ("select * from bbook " +
+             "WHERE startby >= " +
+             str(int((start +
+             timedelta(minutes=5)).timestamp())) +
+             " AND endby <= " +
+             str(int((start +
+             timedelta(hours=24)).timestamp())))
+        bbook = client.query(query)['bbook']
 
-    opt_sbook = sbook.copy()
-    opt_sbook['startby'] -= first_t.timestamp()
-    opt_sbook['startby'] /= 60 * 60 / TIMESTEP
-    opt_sbook['endby'] -= first_t.timestamp()
-    opt_sbook['endby'] /= 60 * 60 / TIMESTEP
-    opt_sbook['id'] = list(range(0, len(opt_sbook)))
-    opt_sbook.set_index('id', drop=True, inplace=True)
+        # Set startby and endby as integers
+        opt_bbook = bbook.copy()
+        opt_bbook['startby'] -= first_t.timestamp()
+        opt_bbook['startby'] /= 60 * 60 / TIMESTEP
+        opt_bbook['endby'] -= first_t.timestamp()
+        opt_bbook['endby'] /= 60 * 60 / TIMESTEP
+        opt_bbook['id'] = list(range(0, len(opt_bbook)))
+        opt_bbook.set_index('id', drop=True, inplace=True)
+    except:
+        # No orders at the moment
+        opt_bbook = pandas.DataFrame()
 
-    opt_dbook = dbook.copy()
-    opt_dbook['startby'] -= first_t.timestamp()
-    opt_dbook['startby'] /= 60 * 60 / TIMESTEP
-    opt_dbook['endby'] -= first_t.timestamp()
-    opt_dbook['endby'] /= 60 * 60 / TIMESTEP
-    opt_dbook['id'] = list(range(0, len(opt_dbook)))
-    opt_dbook.set_index('id', drop=True, inplace=True)
-    # Turn profile_kw from str to floats
-    opt_dbook['profile_kw'] = opt_dbook['profile_kw'].apply(
-        lambda x: [float(v) for v in
-                   x[1:][:-1].replace(" ", "").split(',')])
+    try:
+        query = ("select * from sbook " +
+                 "WHERE startby >= " +
+                 str(int((start +
+                 timedelta(minutes=5)).timestamp())) +
+                 " AND endby <= " +
+                 str(int((start +
+                 timedelta(hours=24)).timestamp())))
+        sbook = client.query(query)['sbook']
+
+        # Set startby and endby as integers
+        opt_sbook = sbook.copy()
+        opt_sbook['startby'] -= first_t.timestamp()
+        opt_sbook['startby'] /= 60 * 60 / TIMESTEP
+        opt_sbook['endby'] -= first_t.timestamp()
+        opt_sbook['endby'] /= 60 * 60 / TIMESTEP
+        opt_sbook['id'] = list(range(0, len(opt_sbook)))
+        opt_sbook.set_index('id', drop=True, inplace=True)
+    except:
+        # No orders at the moment
+        opt_sbook = pandas.DataFrame()
+
+
+    try:
+        query = ("select * from dbook " +
+                 "WHERE startby >= " +
+                 str(int((start +
+                 timedelta(minutes=5)).timestamp())) +
+                 " AND endby <= " +
+                 str(int((start +
+                 timedelta(hours=24)).timestamp())))
+        dbook = client.query(query)['dbook']
+
+        opt_dbook = dbook.copy()
+        opt_dbook['startby'] -= first_t.timestamp()
+        opt_dbook['startby'] /= 60 * 60 / TIMESTEP
+        opt_dbook['endby'] -= first_t.timestamp()
+        opt_dbook['endby'] /= 60 * 60 / TIMESTEP
+        opt_dbook['id'] = list(range(0, len(opt_dbook)))
+        opt_dbook.set_index('id', drop=True, inplace=True)
+        # Turn profile_kw from str to floats
+        opt_dbook['profile_kw'] = opt_dbook['profile_kw'].apply(
+            lambda x: [float(v) for v in
+                       x[1:][:-1].replace(" ", "").split(',')])
+    except:
+        # No orders at the moment
+        opt_dbook = pandas.DataFrame()
 
     # Run the optimization
     tic = datetime.now()
@@ -242,25 +327,28 @@ def optimization():
     client.write_points(total, 'contr')
 
     client.drop_measurement('bschedule')
-    bschedule = (result['batteryin'] + result['batteryout']).copy()
-    bschedule['index'] = uncontr_t
-    bschedule.set_index('index', drop=True, inplace=True)
-    bschedule.rename_axis(None, inplace=True)
-    client.write_points(bschedule, 'bschedule')
+    if result['batteryin'] is not None:
+        bschedule = (result['batteryin'] - result['batteryout']).copy()
+        bschedule['index'] = uncontr_t
+        bschedule.set_index('index', drop=True, inplace=True)
+        bschedule.rename_axis(None, inplace=True)
+        client.write_points(bschedule, 'bschedule')
 
     client.drop_measurement('sschedule')
-    sschedule = result['demandshape'].copy()
-    sschedule['index'] = uncontr_t
-    sschedule.set_index('index', drop=True, inplace=True)
-    sschedule.rename_axis(None, inplace=True)
-    client.write_points(sschedule, 'sschedule')
+    if result['demandshape'] is not None:
+        sschedule = result['demandshape'].copy()
+        sschedule['index'] = uncontr_t
+        sschedule.set_index('index', drop=True, inplace=True)
+        sschedule.rename_axis(None, inplace=True)
+        client.write_points(sschedule, 'sschedule')
 
     client.drop_measurement('dschedule')
-    dschedule = result['demanddeferr'].copy()
-    dschedule['index'] = uncontr_t
-    dschedule.set_index('index', drop=True, inplace=True)
-    dschedule.rename_axis(None, inplace=True)
-    client.write_points(dschedule, 'dschedule')
+    if result['demanddeferr'] is not None:
+        dschedule = result['demanddeferr'].copy()
+        dschedule['index'] = uncontr_t
+        dschedule.set_index('index', drop=True, inplace=True)
+        dschedule.rename_axis(None, inplace=True)
+        client.write_points(dschedule, 'dschedule')
 
     # Close DB connection
     client.close()
