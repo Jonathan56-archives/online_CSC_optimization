@@ -52,7 +52,7 @@ services:
           - 80:80
         environment:
           - LOG_LEVEL=debug
-        # Seems to not create multiple worker?
+        # Seems to not create multiple worker? Needed to reload
         command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--reload", "--port", "80"]
         links:
           - influxdb

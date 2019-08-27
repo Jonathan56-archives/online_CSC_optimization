@@ -14,6 +14,9 @@ import json
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
+# Contact j.coignard@lancey.fr
+# Note: struggled with timezone this is built for CEST (+2h)
+
 # Influxdb connection
 host='influxdb'
 port=8086
@@ -77,10 +80,14 @@ def forecast(times: List[str], values: List[float]):
 @app.put("/batteryorder")
 def battery_order(order: BatteryOrder):
     # Convert start and end time in second since epoch
-    order.startby = datetime.strptime(
-        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
-    order.endby = datetime.strptime(
-        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
+    # minus 2 hours is a work around #@?! timezone
+    # times 1000 for milliseconds
+    order.startby = (datetime.strptime(
+        order.startby, '%Y-%m-%dT%H:%M:%SZ') -
+        timedelta(hours=2)).timestamp() * 1000
+    order.endby = (datetime.strptime(
+        order.endby, '%Y-%m-%dT%H:%M:%SZ') -
+        timedelta(hours=2)).timestamp() * 1000
 
     # Create a dataframe to be saved to influxdb
     df = pandas.DataFrame(
@@ -90,6 +97,21 @@ def battery_order(order: BatteryOrder):
     # Open connection and write to DB
     client = DataFrameClient(host, port, user, password, dbname)
     client.write_points(df, 'bbook')
+    client.close()
+
+    # Run optimization
+    optimization()
+    return {"status": "sucess"}
+
+
+@app.post("/randombatteryorder")
+def random_battery_order():
+    # Retrieve random order
+    df = randomorders.random_battery_orderbook()
+
+    # Open connection and write to DB
+    client = DataFrameClient(host, port, user, password, dbname)
+    client.write_points(df, 'dbook')
     client.close()
 
     # Run optimization
@@ -107,7 +129,8 @@ def remove_battery_order(t: str):
             'end_kwh': [0.0]}
     # minus 2 hours is a work around #@?! timezone
     df = pandas.DataFrame(
-        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') - timedelta(hours=2)],
+        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') -
+               timedelta(hours=2)],
         data=data)
 
     # Open connection and write to DB
@@ -123,15 +146,34 @@ def remove_battery_order(t: str):
 @app.put("/shapeableorder")
 def shapeable_order(order: ShapeableOrder):
     # Convert start and end time in second since epoch
-    order.startby = datetime.strptime(
-        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
-    order.endby = datetime.strptime(
-        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
+    # minus 2 hours is a work around #@?! timezone
+    # times 1000 for milliseconds
+    order.startby = (datetime.strptime(
+        order.startby, '%Y-%m-%dT%H:%M:%SZ') -
+        timedelta(hours=2)).timestamp() * 1000
+    order.endby = (datetime.strptime(
+        order.endby, '%Y-%m-%dT%H:%M:%SZ') -
+        timedelta(hours=2)).timestamp() * 1000
 
     # Create a dataframe to be saved to influxdb
     df = pandas.DataFrame(
         index=[datetime.now().replace(second=0, microsecond=0)],
         data=json.loads(order.json()))
+
+    # Open connection and write to DB
+    client = DataFrameClient(host, port, user, password, dbname)
+    client.write_points(df, 'sbook')
+    client.close()
+
+    # Run optimization
+    optimization()
+    return {"status": "sucess"}
+
+
+@app.post("/randomshapeableorder")
+def random_shapeable_order():
+    # Retrieve random order
+    df = randomorders.random_shapeable_orderbook()
 
     # Open connection and write to DB
     client = DataFrameClient(host, port, user, password, dbname)
@@ -150,7 +192,8 @@ def remove_shapeable_order(t: str):
             'end_kwh': [0.0]}
     # minus 2 hours is a work around #@?! timezone
     df = pandas.DataFrame(
-        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') - timedelta(hours=2)],
+        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') -
+               timedelta(hours=2)],
         data=data)
 
     # Open connection and write to DB
@@ -166,15 +209,36 @@ def remove_shapeable_order(t: str):
 @app.put("/deferrableorder")
 def deferrable_order(order: DeferrableOrder):
     # Convert start and end time in second since epoch
-    order.startby = datetime.strptime(
-        order.startby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
-    order.endby = datetime.strptime(
-        order.endby, '%Y-%m-%dT%H:%M:%SZ').timestamp() * 1000
+    # minus 2 hours is a work around #@?! timezone
+    # times 1000 for milliseconds
+    order.startby = (datetime.strptime(
+        order.startby, '%Y-%m-%dT%H:%M:%SZ') -
+        timedelta(hours=2)).timestamp() * 1000
+    order.endby = (datetime.strptime(
+        order.endby, '%Y-%m-%dT%H:%M:%SZ') -
+        timedelta(hours=2)).timestamp() * 1000
 
     # Create a dataframe to be saved to influxdb
     df = pandas.DataFrame(
         index=[datetime.now().replace(second=0, microsecond=0)],
         data=json.loads(order.json()))
+
+    # Open connection and write to DB
+    client = DataFrameClient(host, port, user, password, dbname)
+    client.write_points(df, 'dbook')
+    client.close()
+
+    # Run optimization
+    optimization()
+    return {"status": "sucess"}
+
+
+@app.post("/randomdeferrableorder")
+def random_deferrable_order():
+    # Retrieve random order
+    TIMESTEP = 12
+    df = randomorders.random_deferrable_orderbook(
+        timestep=60/TIMESTEP)
 
     # Open connection and write to DB
     client = DataFrameClient(host, port, user, password, dbname)
@@ -193,7 +257,8 @@ def remove_deferrable_order(t: str):
             'profile_kw': [[0.0]]}
     # minus 2 hours is a work around #@?! timezone
     df = pandas.DataFrame(
-        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') - timedelta(hours=2)],
+        index=[datetime.strptime(t, '%Y-%m-%d %H:%M:%S') -
+               timedelta(hours=2)],
         data=data)
 
     # Open connection and write to DB
@@ -203,6 +268,31 @@ def remove_deferrable_order(t: str):
 
     # Run optimization
     optimization()
+    return {"status": "sucess"}
+
+
+@app.post("/savetotaldemand")
+def save_total_demand():
+    # Limit the number of call to avoid
+    # high cardinality of influxdb tags
+    # Query total demand data
+    client = DataFrameClient(host, port, user, password, dbname)
+    start = datetime.now()
+    query = ("select * from contr " +
+             "WHERE time >= '" +
+             (start).strftime("%Y-%m-%dT%H:%M:%SZ") +
+             "' AND time <= '" +
+             (start +
+              timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ") +
+             "'")
+    contr = client.query(query)['contr']
+
+    # Save it to a different measurement
+    client.write_points(
+        contr, 'versioncontr',
+        {'version': str(int(datetime.now().replace(
+            second=0, microsecond=0).timestamp() * 1000))})
+    client.close()
     return {"status": "sucess"}
 
 

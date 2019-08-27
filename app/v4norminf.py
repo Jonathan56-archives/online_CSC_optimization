@@ -73,7 +73,7 @@ def maximize_self_consumption(uncontrollable, dfbatteries,
 
     # At the end the energy asked by the load is satisfied
     def r_shape_energy(m, s):
-        return (sum(m.demandshape[i, s] for i in m.horizon) ==
+        return (sum(m.demandshape[i, s] for i in m.horizon) * timestep ==
                 dfshapeables.loc[s, 'end_kwh'])
 
     # If we are outside of startby - endby, we enforce zero power

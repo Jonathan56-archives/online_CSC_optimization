@@ -7,7 +7,6 @@ import time
 import requests
 import json
 
-
 def forecast():
     # Input
     start = datetime.now() - timedelta(hours=5)
@@ -34,16 +33,30 @@ def forecast():
     url = 'http://fastapi/forecast'
     data = {'times': [d.strftime('%Y-%m-%dT%H:%M:%SZ')
                       for d in forecast.index],
-            'values': list((forecast / 1000 - 30).tolist())}
+            'values': list((forecast / 1000 - 42.5).tolist())}
     headers = {"Content-Type": "application/json"}
     response = requests.put(url, data=json.dumps(data), headers=headers)
     res = response.json()
-    print('Forecast sent ' + str(res))
+    print('Forecast request result ' + str(res))
+
+def backup_totaldemand():
+    # Ask server for backup
+    url = 'http://fastapi/savetotaldemand'
+    headers = {"accept": "application/json"}
+    response = requests.post(url, headers=headers)
+    res = response.json()
+    print('Backup request result ' + str(res))
+
+def trigger_random_orders():
+    # Ask server for random orders
+    pass
+
 
 # Schedule forecast
 time.sleep(15) # wait until fastapi is up
 forecast()  # do it once before
 schedule.every().hour.do(forecast)
+schedule.every().hour.do(backup_totaldemand)
 
 while True:
     schedule.run_pending()
