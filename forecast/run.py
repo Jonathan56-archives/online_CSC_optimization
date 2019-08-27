@@ -4,6 +4,9 @@ import setting
 import pandas
 import schedule
 import time
+import requests
+import json
+
 
 def forecast():
     # Input
@@ -28,7 +31,14 @@ def forecast():
     forecast = ts.resample('5T').interpolate()
 
     # Send data over to server
-    print('Sent')
+    url = 'http://fastapi/forecast'
+    data = {'times': [d.strftime('%Y-%m-%dT%H:%M:%SZ')
+                      for d in forecast.index],
+            'values': list((forecast / 1000).tolist())}
+    headers = {"Content-Type": "application/json"}
+    response = requests.put(url, data=json.dumps(data), headers=headers)
+    res = response.json()
+    print('Forecast sent ' + str(res))
 
 # Schedule forecast
 schedule.every().minute.do(forecast)

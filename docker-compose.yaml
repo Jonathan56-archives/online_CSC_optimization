@@ -23,20 +23,24 @@ services:
     #   links:
     #     - influxdb
 
-    # grafana:
-    #     image: grafana/grafana:latest
-    #     volumes:
-    #       - ./grafana:/var/lib/grafana
-    #     ports:
-    #       - 3000:3000
-    #     links:
-    #       - influxdb
+    grafana:
+        image: grafana/grafana:latest
+        volumes:
+          - ./grafana:/var/lib/grafana
+        ports:
+          - 3000:3000
+        links:
+          - influxdb
 
-    # forecast:
-    #     build:
-    #       context: .
-    #       dockerfile: ./forecast/Dockerfile
-    #     image: forecast:latest
+    forecast:
+        build:
+          context: .
+          dockerfile: ./forecast/Dockerfile
+        image: forecast:latest
+        volumes:
+          - ./forecast:/usr/src/app
+        links:
+          - fastapi
 
     fastapi:
         build:
