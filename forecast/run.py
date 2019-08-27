@@ -34,7 +34,7 @@ def forecast():
     url = 'http://fastapi/forecast'
     data = {'times': [d.strftime('%Y-%m-%dT%H:%M:%SZ')
                       for d in forecast.index],
-            'values': list((forecast / 1000).tolist())}
+            'values': list((forecast / 1000 - 30).tolist())}
     headers = {"Content-Type": "application/json"}
     response = requests.put(url, data=json.dumps(data), headers=headers)
     res = response.json()
