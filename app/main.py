@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from influxdb import DataFrameClient
 from datetime import datetime, timedelta
 from v4norminf import maximize_self_consumption
+import randomorders
 import logging
 import pandas
 import time
@@ -111,7 +112,7 @@ def random_battery_order():
 
     # Open connection and write to DB
     client = DataFrameClient(host, port, user, password, dbname)
-    client.write_points(df, 'dbook')
+    client.write_points(df, 'bbook')
     client.close()
 
     # Run optimization

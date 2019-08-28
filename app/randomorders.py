@@ -49,13 +49,13 @@ def random_shapeable_orderbook():
             'endby': [endby.timestamp() * 1000],
             'max_kw': [numpy.random.randint(2, 10)],
             'end_kwh': [min(numpy.random.randint(10, 100),
-                            (endby - startby).total_seconds() / 3600 ]}
+                            (endby - startby).total_seconds() / 3600)]}
 
     # Make sure that energy level is reachable by full charging during
     # the entire period
     data['end_kwh'] = min(
-        data['end_kwh'],
-        (endby - startby).total_seconds() / 3600 * data['max_kw'])
+        data['end_kwh'][0],
+        (endby - startby).total_seconds() / 3600 * data['max_kw'][0])
 
     df = pandas.DataFrame(
         index=[datetime.now().replace(second=0, microsecond=0)],
